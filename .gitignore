@@ -1,0 +1,27 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+MemoryCaptures/
+Recordings/
+
+# IDE / OS
+.vs/
+.idea/
+.vscode/
+*.slnx
+*.csproj
+*.sln
+*.user
+.DS_Store
+
+# Unity crash reports
+sysinfo.txt
+crashlytics-build.properties
+
+# Builds staging for itch
+_itch_release/
