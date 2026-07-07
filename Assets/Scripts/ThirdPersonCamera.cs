@@ -52,7 +52,9 @@ public class ThirdPersonCamera : MonoBehaviour
     void LateUpdate()
     {
         if (target == null) return;
-        float dt = Time.deltaTime;
+        // Unscaled: the camera is part of your attention, not the world — it stays
+        // fully responsive during the crow's slow-mo.
+        float dt = Time.unscaledDeltaTime;
 
         var mouse = Mouse.current;
         if (mouse != null)

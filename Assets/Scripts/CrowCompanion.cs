@@ -23,6 +23,11 @@ public class CrowCompanion : MonoBehaviour
     public float flySpeed = 18f;          // world units per second along the arc
     public float arcHeight = 2.5f;
 
+    [Header("Peek time dilation")]
+    [Tooltip("World time scale while extended into the crow — slower than thought, not stopped.")]
+    public float peekTimeScale = 0.35f;
+    public float timeScaleLerp = 8f;      // how fast the world eases in/out of slow-mo (unscaled)
+
     [Header("Refs (auto-found if empty)")]
     public Transform player;
     public Transform cameraTransform;
@@ -53,8 +58,11 @@ public class CrowCompanion : MonoBehaviour
 
     void Update()
     {
-        float dt = Time.deltaTime;
+        // The crow is attention — it moves at thought-speed, immune to the world's
+        // slow-mo. Everything in here runs on UNSCALED time.
+        float dt = Time.unscaledDeltaTime;
         ReadInputs();
+        UpdateTimeDilation(dt);
 
         switch (State)
         {
@@ -66,7 +74,7 @@ public class CrowCompanion : MonoBehaviour
                                  + player.right * followOffset.x
                                  + Vector3.up * followOffset.y
                                  + player.forward * followOffset.z;
-                    goal += Vector3.up * (Mathf.Sin(Time.time * bobFrequency) * bobAmplitude);
+                    goal += Vector3.up * (Mathf.Sin(Time.unscaledTime * bobFrequency) * bobAmplitude);
                     transform.position = Vector3.Lerp(transform.position, goal, followLerp * dt);
                     // Look where the player looks — it's their attention, after all.
                     FaceDirection(player.forward, 8f, dt);
@@ -81,17 +89,36 @@ public class CrowCompanion : MonoBehaviour
                 Vector3 vel = pos - transform.position;
                 transform.position = pos;
                 if (vel.sqrMagnitude > 0.0001f) FaceDirection(vel.normalized, 12f, dt);
-                if (t >= 1f) { State = CrowState.Perched; scanSeed = Time.time; }
+                if (t >= 1f) { State = CrowState.Perched; scanSeed = Time.unscaledTime; }
                 break;
 
             case CrowState.Perched:
                 // Slow scanning sweep while perched — it's watching for you.
-                float scan = Mathf.Sin((Time.time - scanSeed) * 0.7f) * 60f;
+                float scan = Mathf.Sin((Time.unscaledTime - scanSeed) * 0.7f) * 60f;
                 Quaternion baseRot = Quaternion.LookRotation(FlatToPlayer(), Vector3.up);
                 transform.rotation = Quaternion.Slerp(transform.rotation,
                     baseRot * Quaternion.Euler(0f, scan, 0f), 3f * dt);
                 break;
         }
+    }
+
+    void UpdateTimeDilation(float unscaledDt)
+    {
+        // While peeking the world crawls; the moment you return it breathes back to 1.
+        float goal = PeekHeld ? peekTimeScale : 1f;
+        float ts = Mathf.MoveTowards(Time.timeScale, goal, timeScaleLerp * unscaledDt);
+        Time.timeScale = ts;
+        Time.fixedDeltaTime = 0.02f * ts; // keep physics stepping in sync with the dilation
+    }
+
+    /// <summary>True when the current view aims at a valid perch (drives the reticle).</summary>
+    public bool HasPerchTarget()
+    {
+        Transform view = cameraTransform != null ? cameraTransform : transform;
+        if (Physics.Raycast(view.position, view.forward, out RaycastHit hit, sendRange,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            return player == null || hit.transform.root != player.root;
+        return false;
     }
 
     void ReadInputs()

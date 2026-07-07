@@ -1267,6 +1267,7 @@ GameObject:
   - component: {fileID: 880009941}
   - component: {fileID: 880009940}
   - component: {fileID: 880009944}
+  - component: {fileID: 880009945}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1417,6 +1418,23 @@ MonoBehaviour:
   extendTime: 0.25
   returnTime: 0.15
   peekMaxPitch: 80
+--- !u!114 &880009945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 880009939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c548c629d951540c0976916484e27a20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TalonHUD
+  neutralColor: {r: 1, g: 1, b: 1, a: 0.35}
+  perchColor: {r: 1, g: 0.85, b: 0.3, a: 0.95}
+  dotSize: 5
+  ringSize: 22
+  ringThickness: 2
 --- !u!1 &994691826
 GameObject:
   m_ObjectHideFlags: 0
@@ -2434,6 +2452,8 @@ MonoBehaviour:
   sendRange: 45
   flySpeed: 18
   arcHeight: 2.5
+  peekTimeScale: 0.35
+  timeScaleLerp: 8
   player: {fileID: 0}
   cameraTransform: {fileID: 0}
 --- !u!4 &1832253814
