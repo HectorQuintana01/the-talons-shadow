@@ -23,9 +23,12 @@ Guardrail: the crow must never feel like a mode or a menu.
   ranged Sentry whose aim line heats up before it fires; a crow landing nearby
   **distracts** enemies for a window — scout → send → dash in → strike.
   Peek now also dilates time to 35%. itch v4.
-- **Day 5** — **content lock**: three encounter pockets, a win gate, tuning to
-  new-player difficulty. Boss (Talon-Warden) only if the loop already feels
-  good — it's a stretch goal, cut without guilt.
+- **Day 5 (done)** — **content lock**: three encounter pockets (lone Stalker →
+  Sentry + cover → mixed pack), the Shadow Gate win condition + restart, and
+  **Shadow Step** — dash while peeking from a perch to *become where your
+  attention is* (the perch is consumed). Boss cut in its favor; kill-floor
+  added; tuned toward new players. See DESIGN.md for where this is headed.
+  itch v5.
 - **Day 6** — juice + art: hitstop/shake/SFX, texture pass, real crow model,
   title/restart screen, outside playtest, fix the top confusions.
 - **Day 7** — **release**: final build, footage captured from builds (never the
@@ -41,4 +44,6 @@ Guardrail: the crow must never feel like a mode or a menu.
 | Talon Strike | Left mouse | X |
 | Send crow | E | RB |
 | Peek (hold) | Right mouse | LT |
+| Shadow Step | Space (while peeking a perch) | B (while peeking a perch) |
 | Recall crow | Q | LB |
+| Restart (after winning) | R | Start |

@@ -61,6 +61,18 @@ public class TalonHUD : MonoBehaviour
             GUI.DrawTexture(new Rect(cx - r * 0.5f, cy - r * 0.5f, t, r), px);           // left
             GUI.DrawTexture(new Rect(cx + r * 0.5f - t, cy - r * 0.5f, t, r), px);       // right
         }
+
+        // Shadow-step hint: peeking from a perch with the step off cooldown —
+        // tell the player the option exists (discoverability, day-5).
+        if (crow != null && crow.PeekHeld && crow.ShadowStepReady)
+        {
+            var style = new GUIStyle();
+            style.alignment = TextAnchor.MiddleCenter;
+            style.fontSize = Mathf.RoundToInt(Screen.height * 0.024f);
+            style.fontStyle = FontStyle.Bold;
+            style.normal.textColor = perchColor;
+            GUI.Label(new Rect(0, cy + 40f, Screen.width, 30f), "DASH — SHADOW STEP", style);
+        }
         GUI.color = Color.white;
     }
 }

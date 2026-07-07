@@ -77,6 +77,22 @@ public class TalonController : MonoBehaviour
         Vector3 wishDir = camF * moveInput.y + camR * moveInput.x;
         if (wishDir.sqrMagnitude > 1f) wishDir.Normalize();
 
+        // SHADOW STEP: dash pressed while extended into a perched crow — become
+        // where your attention is. Consumes the perch; arrive with dash i-frames.
+        if (extended && crow != null && DashPressed())
+        {
+            Vector3 landing;
+            if (crow.TryShadowStep(out landing))
+            {
+                cc.enabled = false; // CharacterController fights teleports unless disabled
+                transform.position = landing + Vector3.up * 0.05f;
+                cc.enabled = true;
+                verticalVel = -2f;
+                dashDir = transform.forward;   // brief arrival slide + i-frames
+                dashTimer = dashDuration * 0.7f;
+            }
+        }
+
         // Trigger a dash (commit to a direction: current input, else current facing).
         cooldownTimer -= dt;
         if (!extended && DashPressed() && dashTimer <= 0f && cooldownTimer <= 0f)

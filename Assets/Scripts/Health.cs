@@ -30,6 +30,11 @@ public class Health : MonoBehaviour
     void Update()
     {
         if (hurtCooldown > 0f) hurtCooldown -= Time.deltaTime;
+
+        // Kill floor: anything that escapes the arena (shadow-stepping onto a
+        // boundary wall and hopping off, or any future noclip hole) comes home
+        // instead of falling forever. The Dead Eddie back-wall lesson.
+        if (isPlayer && transform.position.y < -10f) Respawn();
     }
 
     public void TakeDamage(float amount)

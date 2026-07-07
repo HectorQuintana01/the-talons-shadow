@@ -28,6 +28,10 @@ public class CrowCompanion : MonoBehaviour
     public float peekTimeScale = 0.35f;
     public float timeScaleLerp = 8f;      // how fast the world eases in/out of slow-mo (unscaled)
 
+    [Header("Shadow Step (day 5 — taste of the Step tree)")]
+    [Tooltip("Teleporting to the crow consumes the perch: attention collapses into presence.")]
+    public float shadowStepCooldown = 2.5f;
+
     [Header("Refs (auto-found if empty)")]
     public Transform player;
     public Transform cameraTransform;
@@ -43,6 +47,8 @@ public class CrowCompanion : MonoBehaviour
     float flyT;      // 0..1 along the current flight
     float flyDist;
     float scanSeed;
+    float stepReadyAt;   // unscaled time when shadow step is next available
+    bool peekLatch;      // after a step, swallow the held peek until it's released once
 
     void Awake()
     {
@@ -111,6 +117,29 @@ public class CrowCompanion : MonoBehaviour
         Time.fixedDeltaTime = 0.02f * ts; // keep physics stepping in sync with the dilation
     }
 
+    /// <summary>Shadow step is available: crow perched and off cooldown.</summary>
+    public bool ShadowStepReady => State == CrowState.Perched && Time.unscaledTime >= stepReadyAt;
+
+    /// <summary>
+    /// Consume the perch and hand back the landing point beneath it. The crow breaks
+    /// to Follow — you can't keep watching from the place you're now standing.
+    /// </summary>
+    public bool TryShadowStep(out Vector3 landing)
+    {
+        landing = default(Vector3);
+        if (!ShadowStepReady) return false;
+        Vector3 p = transform.position;
+        if (Physics.Raycast(p, Vector3.down, out RaycastHit hit, 40f,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            landing = hit.point;
+        else
+            landing = new Vector3(p.x, 0f, p.z);
+        stepReadyAt = Time.unscaledTime + shadowStepCooldown;
+        State = CrowState.Follow;
+        peekLatch = true;
+        return true;
+    }
+
     /// <summary>True when the current view aims at a valid perch (drives the reticle).</summary>
     public bool HasPerchTarget()
     {
@@ -131,6 +160,13 @@ public class CrowCompanion : MonoBehaviour
         bool peek = false;
         if (mouse != null && mouse.rightButton.isPressed) peek = true;
         if (gp != null && gp.leftTrigger.ReadValue() > 0.4f) peek = true;
+        // After a shadow step the view must come home even if the trigger is still
+        // held — the latch eats the input until the player releases once.
+        if (peekLatch)
+        {
+            if (!peek) peekLatch = false;
+            peek = false;
+        }
         PeekHeld = peek;
 
         // Send: tap E / RB — raycast through the current view (works from a peek too:
