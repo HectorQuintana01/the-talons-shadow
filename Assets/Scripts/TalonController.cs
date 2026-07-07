@@ -23,6 +23,14 @@ public class TalonController : MonoBehaviour
     public float dashDuration = 0.18f;
     public float dashCooldown = 0.55f;
 
+    [Header("Talon Strike (melee)")]
+    public float strikeDamage = 1f;      // enemies have 3 HP → 3 clean hits
+    public float strikeRadius = 0.95f;   // overlap sphere around the strike point
+    public float strikeReach = 1.15f;    // how far in front the sphere sits
+    public float strikeCooldown = 0.45f;
+    public float lungeSpeed = 10f;       // short forward carry so hits feel committed
+    public float lungeDuration = 0.12f;
+
     [Header("Refs")]
     public Transform cameraTransform;  // auto-filled from Camera.main if left empty
 
@@ -32,6 +40,9 @@ public class TalonController : MonoBehaviour
     float dashTimer;                   // counts down while dashing
     float cooldownTimer;
     Vector3 dashDir;
+    float lungeTimer;                  // counts down during a strike's forward carry
+    float strikeCdTimer;
+    float strikeAnimTimer;             // brief animator speed-up so the hit reads
 
     public bool IsDashing => dashTimer > 0f;
     public bool IsInvulnerable => IsDashing; // i-frames during the dash
@@ -75,12 +86,28 @@ public class TalonController : MonoBehaviour
             cooldownTimer = dashCooldown;
         }
 
+        // Talon Strike: commit the body forward and swing (priority: dash > lunge > run).
+        strikeCdTimer -= dt;
+        strikeAnimTimer -= dt;
+        if (!extended && StrikePressed() && strikeCdTimer <= 0f && dashTimer <= 0f)
+        {
+            strikeCdTimer = strikeCooldown;
+            lungeTimer = lungeDuration;
+            strikeAnimTimer = 0.25f;
+            DoStrike();
+        }
+
         // Horizontal velocity: the dash overrides normal movement while it lasts.
         Vector3 horizontal;
         if (dashTimer > 0f)
         {
             dashTimer -= dt;
             horizontal = dashDir * dashSpeed;
+        }
+        else if (lungeTimer > 0f)
+        {
+            lungeTimer -= dt;
+            horizontal = transform.forward * lungeSpeed;
         }
         else
         {
@@ -108,8 +135,32 @@ public class TalonController : MonoBehaviour
         if (animator != null)
         {
             float planarSpeed = new Vector2(horizontal.x, horizontal.z).magnitude;
-            animator.speed = IsDashing ? 1.6f : Mathf.Clamp01(planarSpeed / moveSpeed);
+            animator.speed = strikeAnimTimer > 0f ? 1.8f
+                : IsDashing ? 1.6f
+                : Mathf.Clamp01(planarSpeed / moveSpeed);
         }
+    }
+
+    void DoStrike()
+    {
+        // Overlap a sphere in front of the chest; damage everything with Health
+        // that isn't us. Enemies are 3 HP, strikes are 1 — three committed swings.
+        Vector3 point = transform.position + Vector3.up * 0.9f + transform.forward * strikeReach;
+        foreach (var col in Physics.OverlapSphere(point, strikeRadius,
+                     Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            var h = col.GetComponentInParent<Health>();
+            if (h != null && !h.isPlayer) h.TakeDamage(strikeDamage);
+        }
+    }
+
+    bool StrikePressed()
+    {
+        var mouse = Mouse.current;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame) return true;
+        var gp = Gamepad.current;
+        if (gp != null && gp.buttonWest.wasPressedThisFrame) return true; // X
+        return false;
     }
 
     Vector2 ReadMove()

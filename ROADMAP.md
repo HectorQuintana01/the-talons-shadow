@@ -18,9 +18,11 @@ Guardrail: the crow must never feel like a mode or a menu.
 - **Day 3 (done)** — **the crow**: send it to a perch (E / RB), peek through its
   eyes (hold right-mouse / LT), recall (Q / LB). While extended, the body is
   rooted and vulnerable — awareness costs presence. itch v3.
-- **Day 4** — enemies + melee: talon-strike lunge, `Health`, a chasing Stalker
-  (+ faster Shade variant) and a ranged Sentry; perched crow **distracts**
-  nearby enemies — scout → send → dash in → strike.
+- **Day 4 (done)** — enemies + melee: talon-strike lunge (left-click / X),
+  shared `Health`, a chasing Stalker + faster Shade variant (NavMesh), and a
+  ranged Sentry whose aim line heats up before it fires; a crow landing nearby
+  **distracts** enemies for a window — scout → send → dash in → strike.
+  Peek now also dilates time to 35%. itch v4.
 - **Day 5** — **content lock**: three encounter pockets, a win gate, tuning to
   new-player difficulty. Boss (Talon-Warden) only if the loop already feels
   good — it's a stretch goal, cut without guilt.
@@ -36,6 +38,7 @@ Guardrail: the crow must never feel like a mode or a menu.
 | Move | WASD | Left stick |
 | Camera | Mouse | Right stick |
 | Talon Dash | Space / Left Shift | B |
+| Talon Strike | Left mouse | X |
 | Send crow | E | RB |
 | Peek (hold) | Right mouse | LT |
 | Recall crow | Q | LB |
