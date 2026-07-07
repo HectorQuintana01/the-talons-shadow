@@ -14,6 +14,12 @@ feel like a mode or a menu. The instant it does, the flow is dead.
 
 - **Send** the crow to a perch — your attention placed in the world
 - **Peek** through its eyes — the world runs slower than thought (time dilation)
+- **Perch-hop** — send again *while peeking* and the crow re-routes from its
+  own vantage. Deep scouting with a rising cost: every hop leaves your rooted
+  body in the open a beat longer. Canon since the jam (discovered in play,
+  day 5): base pulse, not tree content — it's the connective tissue all three
+  trees hop along (hop→Step = traveled teleports, hop→distract→hop = herding,
+  hop→look = chained vantage)
 - **Return** — release always snaps home, sharper than it left
 - Slow-mo and the rooted/vulnerable body are not abilities — they're the
   cost-and-texture of the pulse itself, tuned, never unlocked
@@ -62,6 +68,7 @@ The conductor's tree. The crow speaks; the world reacts.
 | In the jam | Full-game seed |
 |---|---|
 | Peek + slow-mo | base pulse |
+| Perch-hopping while extended | base pulse — the trees' connective tissue |
 | Perch distraction (edge-trigger) | VOICE tree root |
 | Shadow Step (perch consumed) | STEP tree root |
 | Reticle gold-on-perch | SIGHT tree root (the eye that knows where it can land) |

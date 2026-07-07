@@ -47,3 +47,7 @@ Guardrail: the crow must never feel like a mode or a menu.
 | Shadow Step | Space (while peeking a perch) | B (while peeking a perch) |
 | Recall crow | Q | LB |
 | Restart (after winning) | R | Start |
+
+**Tip:** send again *while peeking* — the crow re-routes from its own vantage.
+Hop it perch to perch to scout deep (your body stays behind, so every hop is
+a bet), then Shadow Step to wherever it landed.
