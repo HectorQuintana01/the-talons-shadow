@@ -36,6 +36,8 @@ public class TalonController : MonoBehaviour
     public bool IsDashing => dashTimer > 0f;
     public bool IsInvulnerable => IsDashing; // i-frames during the dash
 
+    CrowCompanion crow; // day 3: while peeking through the crow, the body stands still
+
     void Awake()
     {
         cc = GetComponent<CharacterController>();
@@ -44,10 +46,18 @@ public class TalonController : MonoBehaviour
             cameraTransform = Camera.main.transform;
     }
 
+    void Start()
+    {
+        crow = FindFirstObjectByType<CrowCompanion>();
+    }
+
     void Update()
     {
         float dt = Time.deltaTime;
-        Vector2 moveInput = ReadMove();
+        // Extending your awareness costs your presence: while peeking through the
+        // crow, the body is rooted (and vulnerable). Gravity still applies below.
+        bool extended = crow != null && crow.PeekHeld;
+        Vector2 moveInput = extended ? Vector2.zero : ReadMove();
 
         // Camera-relative direction, flattened onto the ground plane.
         Vector3 camF = cameraTransform ? cameraTransform.forward : Vector3.forward;
@@ -58,7 +68,7 @@ public class TalonController : MonoBehaviour
 
         // Trigger a dash (commit to a direction: current input, else current facing).
         cooldownTimer -= dt;
-        if (DashPressed() && dashTimer <= 0f && cooldownTimer <= 0f)
+        if (!extended && DashPressed() && dashTimer <= 0f && cooldownTimer <= 0f)
         {
             dashDir = wishDir.sqrMagnitude > 0.01f ? wishDir.normalized : transform.forward;
             dashTimer = dashDuration;
@@ -127,7 +137,8 @@ public class TalonController : MonoBehaviour
         var kb = Keyboard.current;
         if (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.leftShiftKey.wasPressedThisFrame)) return true;
         var gp = Gamepad.current;
-        if (gp != null && (gp.buttonEast.wasPressedThisFrame || gp.rightShoulder.wasPressedThisFrame)) return true;
+        // B only — RB now belongs to the crow send (day 3 input map).
+        if (gp != null && gp.buttonEast.wasPressedThisFrame) return true;
         return false;
     }
 }
