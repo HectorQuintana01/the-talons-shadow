@@ -43,9 +43,12 @@ public class TalonController : MonoBehaviour
     float lungeTimer;                  // counts down during a strike's forward carry
     float strikeCdTimer;
     float strikeAnimTimer;             // brief animator speed-up so the hit reads
+    float arrivalGrace;                // shadow-step landing: i-frames, no slide
+    float landLockTimer;               // brief input beat on landing so a held stick
+                                       // can't walk you straight off the perch
 
     public bool IsDashing => dashTimer > 0f;
-    public bool IsInvulnerable => IsDashing; // i-frames during the dash
+    public bool IsInvulnerable => IsDashing || arrivalGrace > 0f; // dash + step-arrival i-frames
 
     CrowCompanion crow; // day 3: while peeking through the crow, the body stands still
 
@@ -65,6 +68,10 @@ public class TalonController : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
+        // Heal refs lost to scene reloads (same reason as CrowCompanion.ResolvePerch).
+        if (cameraTransform == null && Camera.main != null)
+            cameraTransform = Camera.main.transform;
+        if (crow == null) crow = FindFirstObjectByType<CrowCompanion>();
         // Extending your awareness costs your presence: while peeking through the
         // crow, the body is rooted (and vulnerable). Gravity still applies below.
         bool extended = crow != null && crow.PeekHeld;
@@ -78,7 +85,9 @@ public class TalonController : MonoBehaviour
         if (wishDir.sqrMagnitude > 1f) wishDir.Normalize();
 
         // SHADOW STEP: dash pressed while extended into a perched crow — become
-        // where your attention is. Consumes the perch; arrive with dash i-frames.
+        // where your attention is. Consumes the perch. You arrive PLANTED: i-frames
+        // without momentum (the old dash-slide launched you off pillar tops), and a
+        // one-beat input lock so the stick you were holding can't walk you off.
         if (extended && crow != null && DashPressed())
         {
             Vector3 landing;
@@ -88,10 +97,15 @@ public class TalonController : MonoBehaviour
                 transform.position = landing + Vector3.up * 0.05f;
                 cc.enabled = true;
                 verticalVel = -2f;
-                dashDir = transform.forward;   // brief arrival slide + i-frames
-                dashTimer = dashDuration * 0.7f;
+                dashTimer = 0f;
+                lungeTimer = 0f;
+                arrivalGrace = 0.35f;
+                landLockTimer = 0.12f;
             }
         }
+        arrivalGrace -= dt;
+        landLockTimer -= dt;
+        if (landLockTimer > 0f) wishDir = Vector3.zero; // the landing beat
 
         // Trigger a dash (commit to a direction: current input, else current facing).
         cooldownTimer -= dt;

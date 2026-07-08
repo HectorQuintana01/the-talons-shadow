@@ -131,7 +131,15 @@ public class CrowCompanion : MonoBehaviour
         Vector3 p = transform.position;
         if (Physics.Raycast(p, Vector3.down, out RaycastHit hit, 40f,
                 Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
             landing = hit.point;
+            // Center-snap: on small platforms (pillar tops) you land planted in the
+            // middle, replacing the crow — not teetering on whatever rim the ray hit.
+            // Long thin surfaces (wall tops) center you across the thin axis only.
+            Bounds b = hit.collider.bounds;
+            if (b.extents.x < 1.5f) landing.x = b.center.x;
+            if (b.extents.z < 1.5f) landing.z = b.center.z;
+        }
         else
             landing = new Vector3(p.x, 0f, p.z);
         stepReadyAt = Time.unscaledTime + shadowStepCooldown;
@@ -140,14 +148,12 @@ public class CrowCompanion : MonoBehaviour
         return true;
     }
 
-    /// <summary>True when the current view aims at a valid perch (drives the reticle).</summary>
+    /// <summary>True when the current view aims at a valid perch (drives the reticle).
+    /// Same resolver as TrySend — the reticle can never lie.</summary>
     public bool HasPerchTarget()
     {
-        Transform view = cameraTransform != null ? cameraTransform : transform;
-        if (Physics.Raycast(view.position, view.forward, out RaycastHit hit, sendRange,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-            return player == null || hit.transform.root != player.root;
-        return false;
+        Vector3 p;
+        return ResolvePerch(out p);
     }
 
     void ReadInputs()
@@ -183,20 +189,69 @@ public class CrowCompanion : MonoBehaviour
 
     void TrySend()
     {
-        Transform view = cameraTransform != null ? cameraTransform : transform;
-        // Ignore triggers; the crow perches on world geometry.
-        if (Physics.Raycast(view.position, view.forward, out RaycastHit hit, sendRange,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        Vector3 perch;
+        if (!ResolvePerch(out perch)) return; // no valid perch → nothing happens
+        flyStart = transform.position;
+        flyTarget = perch;
+        flyDist = Vector3.Distance(flyStart, flyTarget);
+        flyT = 0f;
+        State = CrowState.FlyTo;
+    }
+
+    /// <summary>
+    /// THE one perch resolver — send and reticle both use it, so what glows gold
+    /// is always exactly what the crow will do. "Perch platforms" by geometry:
+    /// - the ray ignores the player (fixes the reticle dying while standing still)
+    /// - upward faces (normal.y > 0.6) are perches
+    /// - side hits EDGE-SNAP onto the top of the thing that was hit
+    /// - anything else refuses the crow
+    /// Perching on tops also guarantees Shadow Step lands the player ON surfaces.
+    /// </summary>
+    public bool ResolvePerch(out Vector3 perch)
+    {
+        perch = default(Vector3);
+        // Heal the camera reference — after a scene reload (R restart) Awake can
+        // run while the old camera is being destroyed, leaving this null and the
+        // crow aiming from its own body. Never trust it blindly.
+        if (cameraTransform == null && Camera.main != null)
+            cameraTransform = Camera.main.transform;
+        if (cameraTransform == null) return false; // no camera, no aim — refuse
+        Transform view = cameraTransform;
+        var hits = Physics.RaycastAll(view.position, view.forward, sendRange,
+            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        if (hits.Length == 0) return false;
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (var hit in hits)
         {
-            // Don't perch on the player.
-            if (player != null && hit.transform.root == player.root) return;
-            flyStart = transform.position;
-            flyTarget = hit.point + hit.normal * 0.3f;
-            flyDist = Vector3.Distance(flyStart, flyTarget);
-            flyT = 0f;
-            State = CrowState.FlyTo;
+            if (player != null && hit.transform.root == player.root) continue; // see past yourself
+            if (hit.transform.root == transform.root) continue;                // and past the crow
+
+            if (hit.normal.y > 0.6f)
+            {
+                perch = hit.point + hit.normal * 0.3f;
+                return true;
+            }
+
+            // Edge check: hit a side — probe down onto the TOP of what we hit,
+            // slightly inset so the probe lands on the surface, not the rim.
+            Bounds b = hit.collider.bounds;
+            Vector3 flatNormal = new Vector3(hit.normal.x, 0f, hit.normal.z);
+            Vector3 inset = hit.point - (flatNormal.sqrMagnitude > 0.001f
+                ? flatNormal.normalized * 0.45f : Vector3.zero);
+            Vector3 probe = new Vector3(inset.x, b.max.y + 0.6f, inset.z);
+            RaycastHit topHit;
+            if (Physics.Raycast(probe, Vector3.down, out topHit, 1.5f,
+                    Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                && topHit.normal.y > 0.6f
+                && (player == null || topHit.transform.root != player.root))
+            {
+                perch = topHit.point + Vector3.up * 0.3f;
+                return true;
+            }
+            return false; // first real obstacle wasn't perchable — the view is blocked
         }
-        // No hit → no perch. (Recall is Q/LB, deliberate rather than accidental.)
+        return false;
     }
 
     void FaceDirection(Vector3 dir, float speed, float dt)
