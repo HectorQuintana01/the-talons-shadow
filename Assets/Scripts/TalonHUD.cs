@@ -19,6 +19,11 @@ public class TalonHUD : MonoBehaviour
     Health playerHealth;
     Texture2D px; // 1x1 white — tinted via GUI.color
 
+    // Distraction tells: "!" floats over enemies whose attention the crow stole.
+    EnemyStalker[] stalkers = new EnemyStalker[0];
+    EnemySentry[] sentries = new EnemySentry[0];
+    float enemyRefreshAt;
+
     void Start()
     {
         crow = FindFirstObjectByType<CrowCompanion>();
@@ -29,11 +34,41 @@ public class TalonHUD : MonoBehaviour
         px.Apply();
     }
 
+    void RefreshEnemyCache()
+    {
+        // Enemies die (Destroy) — re-scan on a slow cadence rather than per frame.
+        if (Time.unscaledTime < enemyRefreshAt) return;
+        enemyRefreshAt = Time.unscaledTime + 1.5f;
+        stalkers = FindObjectsByType<EnemyStalker>(FindObjectsSortMode.None);
+        sentries = FindObjectsByType<EnemySentry>(FindObjectsSortMode.None);
+    }
+
+    void DrawDistractTell(Transform t, Camera cam, GUIStyle style)
+    {
+        Vector3 sp = cam.WorldToScreenPoint(t.position + Vector3.up * 1.6f);
+        if (sp.z <= 0f) return; // behind the camera
+        GUI.Label(new Rect(sp.x - 20f, Screen.height - sp.y - 20f, 40f, 40f), "!", style);
+    }
+
     void OnGUI()
     {
         float cx = Screen.width * 0.5f;
         float cy = Screen.height * 0.5f;
         bool canPerch = crow != null && crow.HasPerchTarget();
+
+        // "!" over distracted enemies — the crow's effect on the world, readable.
+        RefreshEnemyCache();
+        var mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            var tell = new GUIStyle();
+            tell.alignment = TextAnchor.MiddleCenter;
+            tell.fontSize = Mathf.RoundToInt(Screen.height * 0.045f);
+            tell.fontStyle = FontStyle.Bold;
+            tell.normal.textColor = perchColor;
+            foreach (var s in stalkers) if (s != null && s.IsDistracted) DrawDistractTell(s.transform, mainCam, tell);
+            foreach (var s in sentries) if (s != null && s.IsDistracted) DrawDistractTell(s.transform, mainCam, tell);
+        }
 
         // Health bar, top-left (day 4)
         if (playerHealth != null)

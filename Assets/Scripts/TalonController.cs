@@ -23,6 +23,11 @@ public class TalonController : MonoBehaviour
     public float dashDuration = 0.18f;
     public float dashCooldown = 0.55f;
 
+    [Header("Jump")]
+    public float jumpHeight = 1.6f;      // peak height in world units
+    public float coyoteTime = 0.12f;     // grace to still jump just after leaving a ledge
+    public float jumpBuffer = 0.1f;      // press-before-landing forgiveness
+
     [Header("Talon Strike (melee)")]
     public float strikeDamage = 1f;      // enemies have 3 HP → 3 clean hits
     public float strikeRadius = 0.95f;   // overlap sphere around the strike point
@@ -46,16 +51,20 @@ public class TalonController : MonoBehaviour
     float arrivalGrace;                // shadow-step landing: i-frames, no slide
     float landLockTimer;               // brief input beat on landing so a held stick
                                        // can't walk you straight off the perch
+    float coyoteTimer;                 // >0 while a just-left ledge still allows a jump
+    float jumpBufferTimer;             // >0 while a recent jump press waits for the ground
 
     public bool IsDashing => dashTimer > 0f;
     public bool IsInvulnerable => IsDashing || arrivalGrace > 0f; // dash + step-arrival i-frames
 
     CrowCompanion crow; // day 3: while peeking through the crow, the body stands still
+    TrailRenderer trail; // juice: emits only while dashing / arriving from a step
 
     void Awake()
     {
         cc = GetComponent<CharacterController>();
         animator = GetComponentInChildren<Animator>();
+        trail = GetComponentInChildren<TrailRenderer>();
         if (cameraTransform == null && Camera.main != null)
             cameraTransform = Camera.main.transform;
     }
@@ -144,6 +153,20 @@ public class TalonController : MonoBehaviour
             horizontal = wishDir * moveSpeed;
         }
 
+        // Jump — with coyote time (jump just after leaving a ledge) and a small
+        // input buffer (press just before landing still fires). Same forgiveness
+        // philosophy as the perch landing: flow over frame-perfect timing.
+        // Rooted while extended into the crow.
+        coyoteTimer = cc.isGrounded ? coyoteTime : coyoteTimer - dt;
+        jumpBufferTimer -= dt;
+        if (!extended && JumpPressed()) jumpBufferTimer = jumpBuffer;
+        if (jumpBufferTimer > 0f && coyoteTimer > 0f && dashTimer <= 0f)
+        {
+            verticalVel = Mathf.Sqrt(2f * -gravity * jumpHeight); // exact height from gravity
+            jumpBufferTimer = 0f;
+            coyoteTimer = 0f;
+        }
+
         // Gravity so the CharacterController stays pinned to the ground.
         if (cc.isGrounded && verticalVel < 0f) verticalVel = -2f;
         verticalVel += gravity * dt;
@@ -169,6 +192,9 @@ public class TalonController : MonoBehaviour
                 : IsDashing ? 1.6f
                 : Mathf.Clamp01(planarSpeed / moveSpeed);
         }
+
+        // Dash trail: visible only while committed (dash or step arrival).
+        if (trail != null) trail.emitting = IsDashing || arrivalGrace > 0f;
     }
 
     void DoStrike()
@@ -176,11 +202,18 @@ public class TalonController : MonoBehaviour
         // Overlap a sphere in front of the chest; damage everything with Health
         // that isn't us. Enemies are 3 HP, strikes are 1 — three committed swings.
         Vector3 point = transform.position + Vector3.up * 0.9f + transform.forward * strikeReach;
+        int hits = 0;
         foreach (var col in Physics.OverlapSphere(point, strikeRadius,
                      Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
         {
             var h = col.GetComponentInParent<Health>();
-            if (h != null && !h.isPlayer) h.TakeDamage(strikeDamage);
+            if (h != null && !h.isPlayer) { h.TakeDamage(strikeDamage); hits++; }
+        }
+        if (hits > 0)
+        {
+            // Connection juice: the world holds its breath, the camera kicks.
+            CrowCompanion.RequestHitstop(0.055f);
+            ThirdPersonCamera.Shake(0.09f);
         }
     }
 
@@ -215,11 +248,21 @@ public class TalonController : MonoBehaviour
 
     bool DashPressed()
     {
+        // Shift only on keyboard now — Space became Jump (day-6 map).
         var kb = Keyboard.current;
-        if (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.leftShiftKey.wasPressedThisFrame)) return true;
+        if (kb != null && kb.leftShiftKey.wasPressedThisFrame) return true;
         var gp = Gamepad.current;
-        // B only — RB now belongs to the crow send (day 3 input map).
+        // B (East) — RB is crow send, A (South) is Jump.
         if (gp != null && gp.buttonEast.wasPressedThisFrame) return true;
+        return false;
+    }
+
+    bool JumpPressed()
+    {
+        var kb = Keyboard.current;
+        if (kb != null && kb.spaceKey.wasPressedThisFrame) return true;
+        var gp = Gamepad.current;
+        if (gp != null && gp.buttonSouth.wasPressedThisFrame) return true; // A
         return false;
     }
 }

@@ -108,11 +108,23 @@ public class CrowCompanion : MonoBehaviour
         }
     }
 
+    // --- Hitstop (juice): a single writer owns Time.timeScale, so hitstop lives
+    // here and composes with the peek dilation instead of fighting it. ---
+    static float hitstopUntil;
+    public static void RequestHitstop(float seconds)
+    {
+        hitstopUntil = Mathf.Max(hitstopUntil, Time.unscaledTime + seconds);
+    }
+
     void UpdateTimeDilation(float unscaledDt)
     {
         // While peeking the world crawls; the moment you return it breathes back to 1.
         float goal = PeekHeld ? peekTimeScale : 1f;
-        float ts = Mathf.MoveTowards(Time.timeScale, goal, timeScaleLerp * unscaledDt);
+        float ts;
+        if (Time.unscaledTime < hitstopUntil)
+            ts = 0.05f; // the hit lands, the world holds its breath
+        else
+            ts = Mathf.MoveTowards(Time.timeScale, goal, timeScaleLerp * unscaledDt);
         Time.timeScale = ts;
         Time.fixedDeltaTime = 0.02f * ts; // keep physics stepping in sync with the dilation
     }

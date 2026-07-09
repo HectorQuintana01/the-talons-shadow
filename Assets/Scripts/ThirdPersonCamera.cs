@@ -35,6 +35,14 @@ public class ThirdPersonCamera : MonoBehaviour
     float yaw;
     float pitch = 20f;
 
+    // --- Screen shake (juice): amplitude decays on unscaled time so hits still
+    // kick during hitstop/slow-mo. Static so anything can shake without a ref. ---
+    static float shakeAmp;
+    public static void Shake(float amplitude)
+    {
+        shakeAmp = Mathf.Max(shakeAmp, amplitude);
+    }
+
     void Start()
     {
         if (target == null)
@@ -89,7 +97,16 @@ public class ThirdPersonCamera : MonoBehaviour
         float dist = Mathf.Lerp(distance, peekDistance, peekBlend);
         Vector3 desired = pivot - rot * Vector3.forward * dist;
 
-        transform.position = Vector3.Lerp(transform.position, desired, followLerp * dt);
+        Vector3 finalPos = Vector3.Lerp(transform.position, desired, followLerp * dt);
+        if (shakeAmp > 0.001f)
+        {
+            finalPos += new Vector3(
+                (Mathf.PerlinNoise(Time.unscaledTime * 31f, 0.3f) - 0.5f),
+                (Mathf.PerlinNoise(0.7f, Time.unscaledTime * 29f) - 0.5f),
+                0f) * (2f * shakeAmp);
+            shakeAmp = Mathf.MoveTowards(shakeAmp, 0f, 1.6f * dt); // fast decay
+        }
+        transform.position = finalPos;
         transform.rotation = rot;
 
         if (cam != null)

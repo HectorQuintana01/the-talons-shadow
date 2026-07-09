@@ -19,22 +19,52 @@ public class Health : MonoBehaviour
     Quaternion spawnRot;
     float hurtCooldown;                  // brief grace after a hit so contact damage can't melt
 
+    // Hit flash (juice): renderers blink white for a beat when damage lands.
+    Renderer[] renderers;
+    MaterialPropertyBlock mpb;
+    float flashTimer;
+    static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
     void Awake()
     {
         Current = maxHealth;
         talon = GetComponent<TalonController>();
         spawnPos = transform.position;
         spawnRot = transform.rotation;
+        renderers = GetComponentsInChildren<Renderer>();
+        mpb = new MaterialPropertyBlock();
     }
 
     void Update()
     {
         if (hurtCooldown > 0f) hurtCooldown -= Time.deltaTime;
 
+        // Hit flash decay (unscaled so it reads through hitstop/slow-mo).
+        if (flashTimer > 0f)
+        {
+            flashTimer -= Time.unscaledDeltaTime;
+            if (flashTimer <= 0f) SetFlash(false);
+        }
+
         // Kill floor: anything that escapes the arena (shadow-stepping onto a
         // boundary wall and hopping off, or any future noclip hole) comes home
         // instead of falling forever. The Dead Eddie back-wall lesson.
         if (isPlayer && transform.position.y < -10f) Respawn();
+    }
+
+    void SetFlash(bool on)
+    {
+        if (renderers == null) return;
+        foreach (var r in renderers)
+        {
+            if (r == null) continue;
+            if (on)
+            {
+                mpb.SetColor(BaseColorId, Color.white * 2.5f);
+                r.SetPropertyBlock(mpb);
+            }
+            else r.SetPropertyBlock(null);
+        }
     }
 
     public void TakeDamage(float amount)
@@ -44,6 +74,11 @@ public class Health : MonoBehaviour
 
         Current -= amount;
         hurtCooldown = isPlayer ? 0.6f : 0.1f;
+
+        // Feedback: everyone flashes; the player's hits also rock the camera.
+        flashTimer = 0.09f;
+        SetFlash(true);
+        if (isPlayer) ThirdPersonCamera.Shake(0.16f);
 
         if (Current <= 0f)
         {

@@ -29,8 +29,11 @@ Guardrail: the crow must never feel like a mode or a menu.
   attention is* (the perch is consumed). Boss cut in its favor; kill-floor
   added; tuned toward new players. See DESIGN.md for where this is headed.
   itch v5.
-- **Day 6** — juice + art: hitstop/shake/SFX, texture pass, real crow model,
-  title/restart screen, outside playtest, fix the top confusions.
+- **Day 6 (in progress)** — juice + feel: hitstop on connect, screen shake,
+  hit flash, dash trail, "!" distraction tells, a **jump** (coyote time +
+  input buffer), and a Shadow Step feel pass (edge-snap perches, planted
+  landings). itch v6. Remaining: art pass (texture + real crow), title
+  screen, outside playtest.
 - **Day 7** — **release**: final build, footage captured from builds (never the
   editor), itch page public.
 
@@ -40,7 +43,8 @@ Guardrail: the crow must never feel like a mode or a menu.
 |---|---|---|
 | Move | WASD | Left stick |
 | Camera | Mouse | Right stick |
-| Talon Dash | Space / Left Shift | B |
+| Jump | Space | A |
+| Talon Dash | Left Shift | B |
 | Talon Strike | Left mouse | X |
 | Send crow | E | RB |
 | Peek (hold) | Right mouse | LT |
