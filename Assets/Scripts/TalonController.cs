@@ -76,6 +76,7 @@ public class TalonController : MonoBehaviour
 
     void Update()
     {
+        if (!GameLoop.IsPlaying) return; // title/pause/win: the body waits
         float dt = Time.deltaTime;
         // Heal refs lost to scene reloads (same reason as CrowCompanion.ResolvePerch).
         if (cameraTransform == null && Camera.main != null)
@@ -110,6 +111,7 @@ public class TalonController : MonoBehaviour
                 lungeTimer = 0f;
                 arrivalGrace = 0.35f;
                 landLockTimer = 0.12f;
+                Sfx.Play("step", landing);
             }
         }
         arrivalGrace -= dt;
@@ -123,6 +125,7 @@ public class TalonController : MonoBehaviour
             dashDir = wishDir.sqrMagnitude > 0.01f ? wishDir.normalized : transform.forward;
             dashTimer = dashDuration;
             cooldownTimer = dashCooldown;
+            Sfx.Play("dash", transform.position, 0.6f);
         }
 
         // Talon Strike: commit the body forward and swing (priority: dash > lunge > run).
@@ -214,13 +217,18 @@ public class TalonController : MonoBehaviour
             // Connection juice: the world holds its breath, the camera kicks.
             CrowCompanion.RequestHitstop(0.055f);
             ThirdPersonCamera.Shake(0.09f);
+            Sfx.Play("strike_hit", point);
         }
+        else Sfx.Play("strike_whiff", point, 0.45f);
     }
 
     bool StrikePressed()
     {
         var mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame) return true;
+        // A click while the cursor is unlocked is the pointer-lock RECAPTURE
+        // click (browser stole the lock) — it must not also swing the talons.
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame
+            && Cursor.lockState == CursorLockMode.Locked) return true;
         var gp = Gamepad.current;
         if (gp != null && gp.buttonWest.wasPressedThisFrame) return true; // X
         return false;

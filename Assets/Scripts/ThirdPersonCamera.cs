@@ -43,6 +43,9 @@ public class ThirdPersonCamera : MonoBehaviour
         shakeAmp = Mathf.Max(shakeAmp, amplitude);
     }
 
+    /// <summary>Statics survive scene reloads — GameLoop.Awake clears them.</summary>
+    public static void ResetJuice() { shakeAmp = 0f; }
+
     void Start()
     {
         if (target == null)
@@ -54,12 +57,13 @@ public class ThirdPersonCamera : MonoBehaviour
         crow = FindFirstObjectByType<CrowCompanion>();
         cam = GetComponent<Camera>();
         baseFov = cam != null ? cam.fieldOfView : 60f;
-        Cursor.lockState = CursorLockMode.Locked; // WebGL engages this on first click
+        // Cursor lock is owned by GameLoop now (title unlocks, play locks).
     }
 
     void LateUpdate()
     {
         if (target == null) return;
+        if (!GameLoop.IsPlaying) return; // frozen tableau behind title/pause/win cards
         // Unscaled: the camera is part of your attention, not the world — it stays
         // fully responsive during the crow's slow-mo.
         float dt = Time.unscaledDeltaTime;

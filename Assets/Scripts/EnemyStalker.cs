@@ -45,6 +45,7 @@ public class EnemyStalker : MonoBehaviour
 
     void Update()
     {
+        if (!GameLoop.IsPlaying) return; // paused agents must not bite
         if (player == null) return;
         attackTimer -= Time.deltaTime;
 

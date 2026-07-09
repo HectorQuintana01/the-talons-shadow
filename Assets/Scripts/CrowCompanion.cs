@@ -64,6 +64,9 @@ public class CrowCompanion : MonoBehaviour
 
     void Update()
     {
+        // Gated by game state: on title/pause GameLoop owns Time.timeScale and
+        // this script must not fight it (it's the only other timeScale writer).
+        if (!GameLoop.IsPlaying) { PeekHeld = false; return; }
         // The crow is attention — it moves at thought-speed, immune to the world's
         // slow-mo. Everything in here runs on UNSCALED time.
         float dt = Time.unscaledDeltaTime;
@@ -115,6 +118,9 @@ public class CrowCompanion : MonoBehaviour
     {
         hitstopUntil = Mathf.Max(hitstopUntil, Time.unscaledTime + seconds);
     }
+
+    /// <summary>Statics survive scene reloads — GameLoop.Awake clears them.</summary>
+    public static void ResetJuice() { hitstopUntil = 0f; }
 
     void UpdateTimeDilation(float unscaledDt)
     {
@@ -208,6 +214,7 @@ public class CrowCompanion : MonoBehaviour
         flyDist = Vector3.Distance(flyStart, flyTarget);
         flyT = 0f;
         State = CrowState.FlyTo;
+        Sfx.Play("caw", transform.position, 0.7f);
     }
 
     /// <summary>

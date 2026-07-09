@@ -52,6 +52,7 @@ public class TalonHUD : MonoBehaviour
 
     void OnGUI()
     {
+        if (!GameLoop.IsPlaying) return; // no HUD over title/pause/win cards
         float cx = Screen.width * 0.5f;
         float cy = Screen.height * 0.5f;
         bool canPerch = crow != null && crow.HasPerchTarget();

@@ -52,6 +52,7 @@ public class EnemySentry : MonoBehaviour
 
     void Update()
     {
+        if (!GameLoop.IsPlaying) return; // no winding up through the pause card
         if (player == null) return;
         refire -= Time.deltaTime;
 
@@ -113,5 +114,6 @@ public class EnemySentry : MonoBehaviour
         Destroy(go.GetComponent<Collider>()); // bolt does its own proximity check
         var bolt = go.AddComponent<SentryBolt>();
         bolt.Init((aimPoint - muzzle.position).normalized, boltSpeed, boltDamage);
+        Sfx.Play("bolt", muzzle.position, 0.7f);
     }
 }

@@ -24,6 +24,7 @@ public class SentryBolt : MonoBehaviour
 
     void Update()
     {
+        if (!GameLoop.IsPlaying) return; // bolts freeze with the world
         float dt = Time.deltaTime;
         life -= dt;
         if (life <= 0f) { Destroy(gameObject); return; }

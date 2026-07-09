@@ -78,13 +78,21 @@ public class Health : MonoBehaviour
         // Feedback: everyone flashes; the player's hits also rock the camera.
         flashTimer = 0.09f;
         SetFlash(true);
-        if (isPlayer) ThirdPersonCamera.Shake(0.16f);
+        if (isPlayer)
+        {
+            ThirdPersonCamera.Shake(0.16f);
+            Sfx.Play("hurt", transform.position);
+        }
 
         if (Current <= 0f)
         {
             Died?.Invoke(this);
             if (isPlayer) Respawn();
-            else Destroy(gameObject);
+            else
+            {
+                Sfx.Play("enemy_death", transform.position);
+                Destroy(gameObject);
+            }
         }
     }
 
