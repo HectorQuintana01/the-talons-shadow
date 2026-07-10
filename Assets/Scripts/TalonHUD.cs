@@ -50,6 +50,43 @@ public class TalonHUD : MonoBehaviour
         GUI.Label(new Rect(sp.x - 20f, Screen.height - sp.y - 20f, 40f, 40f), "!", style);
     }
 
+    BossWarden boss;
+    float bossRefreshAt;
+
+    void DrawBossBar()
+    {
+        if (Time.unscaledTime >= bossRefreshAt) { boss = FindFirstObjectByType<BossWarden>(); bossRefreshAt = Time.unscaledTime + 1f; }
+        if (boss == null || !boss.Alive) return;
+        var bh = boss.GetComponent<Health>();
+        if (bh == null) return;
+
+        float w = Screen.width * 0.5f, h = 18f, x = (Screen.width - w) * 0.5f, y = 24f;
+        GUI.color = new Color(0f, 0f, 0f, 0.6f);
+        GUI.DrawTexture(new Rect(x - 3, y - 3, w + 6, h + 6), px);
+        float frac = Mathf.Clamp01(bh.Current / bh.maxHealth);
+        // Guarded = steely blue (can't hurt it); guard broken = hot red (strike now!).
+        GUI.color = bh.guardActive
+            ? new Color(0.35f, 0.45f, 0.7f, 0.9f)
+            : new Color(0.9f, 0.2f, 0.15f, 0.95f);
+        GUI.DrawTexture(new Rect(x, y, w * frac, h), px);
+
+        // Wind-up telegraph pip below the bar during a charge/slam.
+        if (boss.TelegraphFill > 0f && boss.TelegraphFill < 1f)
+        {
+            GUI.color = new Color(1f, 0.55f, 0.1f, 0.9f);
+            GUI.DrawTexture(new Rect(x, y + h + 3, w * boss.TelegraphFill, 5f), px);
+        }
+
+        var label = new GUIStyle();
+        label.alignment = TextAnchor.MiddleCenter;
+        label.fontSize = Mathf.RoundToInt(Screen.height * 0.02f);
+        label.fontStyle = FontStyle.Bold;
+        label.normal.textColor = bh.guardActive ? new Color(0.7f, 0.8f, 1f) : new Color(1f, 0.85f, 0.85f);
+        GUI.color = Color.white;
+        GUI.Label(new Rect(x, y - Screen.height * 0.028f, w, Screen.height * 0.026f),
+            bh.guardActive ? "THE TALON-WARDEN  —  guarded (send the crow)" : "THE TALON-WARDEN  —  EXPOSED", label);
+    }
+
     void OnGUI()
     {
         if (!GameLoop.IsPlaying) return; // no HUD over title/pause/win cards
@@ -82,6 +119,9 @@ public class TalonHUD : MonoBehaviour
                                    new Color(0.85f, 0.7f, 0.25f, 0.9f), frac);
             GUI.DrawTexture(new Rect(pad, pad, w * frac, h), px);
         }
+
+        // Boss bar, top-center — only while the Warden lives (day 7 boss).
+        DrawBossBar();
 
         // Center dot
         GUI.color = canPerch ? perchColor : neutralColor;

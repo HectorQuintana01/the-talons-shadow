@@ -34,8 +34,12 @@ Guardrail: the crow must never feel like a mode or a menu.
   input buffer), and a Shadow Step feel pass (edge-snap perches, planted
   landings). itch v6. Remaining: art pass (texture + real crow), title
   screen, outside playtest.
-- **Day 7** — **release**: final build, footage captured from builds (never the
-  editor), itch page public.
+- **Boss (done)** — the **Talon-Warden** guards the gate: strike-immune until
+  the crow breaks its guard, telegraphed charge (read it from crow height) +
+  ground-slam, three guard-breaks to fell it. The whole game's sentence as a
+  fight. itch v8.
+- **Release** — final build, footage from builds (never the editor), itch page
+  public.
 
 ## Controls
 

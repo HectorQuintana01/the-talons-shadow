@@ -11,6 +11,9 @@ public class Health : MonoBehaviour
     public float maxHealth = 3f;
     public bool isPlayer = false;
 
+    /// <summary>When true, damage is swallowed (the Warden's guard). Set by BossWarden.</summary>
+    public bool guardActive = false;
+
     public float Current { get; private set; }
     public System.Action<Health> Died;   // optional hook (GameLoop uses this on day 5)
 
@@ -71,6 +74,12 @@ public class Health : MonoBehaviour
     {
         if (hurtCooldown > 0f) return;
         if (talon != null && talon.IsInvulnerable) return; // dash i-frames are real now
+        if (guardActive)                                   // the Warden's guard: crow breaks it
+        {
+            Sfx.Play("strike_whiff", transform.position, 0.35f); // "clang" — no damage
+            flashTimer = 0.05f; SetFlash(true);
+            return;
+        }
 
         Current -= amount;
         hurtCooldown = isPlayer ? 0.6f : 0.1f;
