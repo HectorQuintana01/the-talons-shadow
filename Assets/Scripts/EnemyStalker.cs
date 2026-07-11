@@ -18,6 +18,8 @@ public class EnemyStalker : MonoBehaviour
     public float contactRange = 1.4f;
     public float contactDamage = 20f;
     public float attackCooldown = 1.0f;
+    [Tooltip("Shove on contact — the Bruiser variant cranks this to knock you off ledges.")]
+    public float knockback = 7f;
 
     [Header("Crow distraction")]
     public float distractRadius = 9f;
@@ -72,6 +74,13 @@ public class EnemyStalker : MonoBehaviour
             if (distToPlayer <= contactRange && attackTimer <= 0f && playerHealth != null)
             {
                 playerHealth.TakeDamage(contactDamage);
+                var tc = playerHealth.GetComponent<TalonController>();
+                if (tc != null)
+                {
+                    Vector3 away = (player.position - transform.position);
+                    away.y = 0f;
+                    tc.AddImpulse(away.normalized * knockback + Vector3.up * (knockback * 0.35f));
+                }
                 attackTimer = attackCooldown;
             }
         }

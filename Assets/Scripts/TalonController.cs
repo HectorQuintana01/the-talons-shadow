@@ -28,6 +28,12 @@ public class TalonController : MonoBehaviour
     public float coyoteTime = 0.12f;     // grace to still jump just after leaving a ledge
     public float jumpBuffer = 0.1f;      // press-before-landing forgiveness
 
+    [Header("Knockback / falls (v2 — height is dangerous)")]
+    public float impulseDecay = 8f;      // how fast external shoves bleed off (units/s²)
+    public float safeFallSpeed = 12.5f;  // impact speed you land clean at (~2.5x jump height)
+    public float fallDamagePerSpeed = 4f;// HP per unit/s beyond safe
+    public float maxFallDamage = 60f;
+
     [Header("Talon Strike (melee)")]
     public float strikeDamage = 1f;      // enemies have 3 HP → 3 clean hits
     public float strikeRadius = 0.95f;   // overlap sphere around the strike point
@@ -53,6 +59,17 @@ public class TalonController : MonoBehaviour
                                        // can't walk you straight off the perch
     float coyoteTimer;                 // >0 while a just-left ledge still allows a jump
     float jumpBufferTimer;             // >0 while a recent jump press waits for the ground
+    Vector3 externalVel;               // knockback: shoves from enemies, decays fast
+    bool wasGrounded = true;           // for landing-impact detection
+
+    /// <summary>Shove the body (enemy hits, boss charge, slam). Horizontal part
+    /// decays over ~a quarter second; the vertical part joins gravity's ledger.
+    /// Near a ledge this is how you get knocked OFF — height is dangerous.</summary>
+    public void AddImpulse(Vector3 impulse)
+    {
+        externalVel += new Vector3(impulse.x, 0f, impulse.z);
+        if (impulse.y > 0f) verticalVel = Mathf.Max(verticalVel, 0f) + impulse.y;
+    }
 
     public bool IsDashing => dashTimer > 0f;
     public bool IsInvulnerable => IsDashing || arrivalGrace > 0f; // dash + step-arrival i-frames
@@ -174,9 +191,30 @@ public class TalonController : MonoBehaviour
         if (cc.isGrounded && verticalVel < 0f) verticalVel = -2f;
         verticalVel += gravity * dt;
 
-        Vector3 motion = horizontal;
+        // Knockback rides on top of intent — you keep control while being shoved.
+        externalVel = Vector3.MoveTowards(externalVel, Vector3.zero, impulseDecay * dt);
+
+        Vector3 motion = horizontal + externalVel;
         motion.y = verticalVel;
         cc.Move(motion * dt);
+
+        // Fall damage: on the landing frame verticalVel still holds the impact
+        // speed (the -2 clamp happens next frame, pre-Move). Shadow Step arrives
+        // at -2 so it's exempt by construction.
+        bool grounded = cc.isGrounded;
+        if (grounded && !wasGrounded)
+        {
+            float impact = -verticalVel;
+            if (impact > safeFallSpeed)
+            {
+                float dmg = Mathf.Min((impact - safeFallSpeed) * fallDamagePerSpeed, maxFallDamage);
+                var hp = GetComponent<Health>();
+                if (hp != null) hp.TakeDamage(dmg);
+                ThirdPersonCamera.Shake(Mathf.Lerp(0.15f, 0.4f, dmg / maxFallDamage));
+                Sfx.Play("step", transform.position, 0.8f); // heavy landing whump
+            }
+        }
+        wasGrounded = grounded;
 
         // Turn the body toward where it's going (Elden-Ring style free movement).
         Vector3 faceDir = dashTimer > 0f ? dashDir : wishDir;

@@ -19,7 +19,10 @@ public class CrowCompanion : MonoBehaviour
     public float bobFrequency = 2.2f;
 
     [Header("Send / Fly")]
-    public float sendRange = 45f;
+    [Tooltip("How far the CROW can fly per send — from its current position to the perch. The Ascent's ladder rule: altitude is earned one hop at a time.")]
+    public float sendRange = 22f;
+    [Tooltip("How far the view ray probes for perch candidates (can exceed sendRange — that's how the reticle knows a perch is 'too far').")]
+    public float probeRange = 60f;
     public float flySpeed = 18f;          // world units per second along the arc
     public float arcHeight = 2.5f;
 
@@ -166,12 +169,15 @@ public class CrowCompanion : MonoBehaviour
         return true;
     }
 
-    /// <summary>True when the current view aims at a valid perch (drives the reticle).
+    /// <summary>Tri-state aim result: what the reticle shows and what send will do.</summary>
+    public enum PerchAim { None, Valid, TooFar }
+
+    /// <summary>True when the current view aims at a REACHABLE perch (drives send).
     /// Same resolver as TrySend — the reticle can never lie.</summary>
     public bool HasPerchTarget()
     {
         Vector3 p;
-        return ResolvePerch(out p);
+        return AimPerch(out p) == PerchAim.Valid;
     }
 
     void ReadInputs()
@@ -208,7 +214,7 @@ public class CrowCompanion : MonoBehaviour
     void TrySend()
     {
         Vector3 perch;
-        if (!ResolvePerch(out perch)) return; // no valid perch → nothing happens
+        if (AimPerch(out perch) != PerchAim.Valid) return; // none or too far → refuse
         flyStart = transform.position;
         flyTarget = perch;
         flyDist = Vector3.Distance(flyStart, flyTarget);
@@ -224,9 +230,12 @@ public class CrowCompanion : MonoBehaviour
     /// - upward faces (normal.y > 0.6) are perches
     /// - side hits EDGE-SNAP onto the top of the thing that was hit
     /// - anything else refuses the crow
+    /// THE ASCENT RULE (v2): the view PROBES far (probeRange) but the crow only
+    /// FLIES sendRange from its own body — a visible perch beyond its wings
+    /// returns TooFar (red reticle). Altitude is earned one hop at a time.
     /// Perching on tops also guarantees Shadow Step lands the player ON surfaces.
     /// </summary>
-    public bool ResolvePerch(out Vector3 perch)
+    public PerchAim AimPerch(out Vector3 perch)
     {
         perch = default(Vector3);
         // Heal the camera reference — after a scene reload (R restart) Awake can
@@ -234,11 +243,11 @@ public class CrowCompanion : MonoBehaviour
         // crow aiming from its own body. Never trust it blindly.
         if (cameraTransform == null && Camera.main != null)
             cameraTransform = Camera.main.transform;
-        if (cameraTransform == null) return false; // no camera, no aim — refuse
+        if (cameraTransform == null) return PerchAim.None; // no camera, no aim
         Transform view = cameraTransform;
-        var hits = Physics.RaycastAll(view.position, view.forward, sendRange,
+        var hits = Physics.RaycastAll(view.position, view.forward, probeRange,
             Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-        if (hits.Length == 0) return false;
+        if (hits.Length == 0) return PerchAim.None;
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (var hit in hits)
@@ -249,7 +258,7 @@ public class CrowCompanion : MonoBehaviour
             if (hit.normal.y > 0.6f)
             {
                 perch = hit.point + hit.normal * 0.3f;
-                return true;
+                return Classify(perch);
             }
 
             // Edge check: hit a side — probe down onto the TOP of what we hit,
@@ -266,11 +275,24 @@ public class CrowCompanion : MonoBehaviour
                 && (player == null || topHit.transform.root != player.root))
             {
                 perch = topHit.point + Vector3.up * 0.3f;
-                return true;
+                return Classify(perch);
             }
-            return false; // first real obstacle wasn't perchable — the view is blocked
+            return PerchAim.None; // first real obstacle wasn't perchable — view blocked
         }
-        return false;
+        return PerchAim.None;
+    }
+
+    PerchAim Classify(Vector3 perch)
+    {
+        // Reach is measured from the CROW — it's the bird that has to fly there.
+        return Vector3.Distance(transform.position, perch) <= sendRange
+            ? PerchAim.Valid : PerchAim.TooFar;
+    }
+
+    /// <summary>Back-compat wrapper (Shadow Step callers etc.).</summary>
+    public bool ResolvePerch(out Vector3 perch)
+    {
+        return AimPerch(out perch) == PerchAim.Valid;
     }
 
     void FaceDirection(Vector3 dir, float speed, float dt)

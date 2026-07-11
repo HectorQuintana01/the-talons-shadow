@@ -11,6 +11,7 @@ public class TalonHUD : MonoBehaviour
 {
     public Color neutralColor = new Color(1f, 1f, 1f, 0.35f);
     public Color perchColor = new Color(1f, 0.85f, 0.3f, 0.95f); // gold: "the crow can go there"
+    public Color tooFarColor = new Color(0.95f, 0.25f, 0.2f, 0.95f); // red: perch seen, beyond the crow's wings
     public float dotSize = 5f;
     public float ringSize = 22f;
     public float ringThickness = 2f;
@@ -92,7 +93,10 @@ public class TalonHUD : MonoBehaviour
         if (!GameLoop.IsPlaying) return; // no HUD over title/pause/win cards
         float cx = Screen.width * 0.5f;
         float cy = Screen.height * 0.5f;
-        bool canPerch = crow != null && crow.HasPerchTarget();
+        Vector3 aimP;
+        var aim = crow != null ? crow.AimPerch(out aimP) : CrowCompanion.PerchAim.None;
+        bool canPerch = aim == CrowCompanion.PerchAim.Valid;
+        bool tooFar = aim == CrowCompanion.PerchAim.TooFar;
 
         // "!" over distracted enemies — the crow's effect on the world, readable.
         RefreshEnemyCache();
@@ -123,12 +127,13 @@ public class TalonHUD : MonoBehaviour
         // Boss bar, top-center — only while the Warden lives (day 7 boss).
         DrawBossBar();
 
-        // Center dot
-        GUI.color = canPerch ? perchColor : neutralColor;
+        // Center dot: gold = send lands, red = perch visible but beyond the crow's
+        // wings (hop closer first), dim = nothing there.
+        GUI.color = canPerch ? perchColor : tooFar ? tooFarColor : neutralColor;
         float d = dotSize;
         GUI.DrawTexture(new Rect(cx - d * 0.5f, cy - d * 0.5f, d, d), px);
 
-        // Perch ring: four thin edges of a square ring (cheap, reads as a frame)
+        // Perch ring: solid gold frame when reachable; BROKEN red corners when too far.
         if (canPerch)
         {
             float r = ringSize, t = ringThickness;
@@ -136,6 +141,19 @@ public class TalonHUD : MonoBehaviour
             GUI.DrawTexture(new Rect(cx - r * 0.5f, cy + r * 0.5f - t, r, t), px);       // bottom
             GUI.DrawTexture(new Rect(cx - r * 0.5f, cy - r * 0.5f, t, r), px);           // left
             GUI.DrawTexture(new Rect(cx + r * 0.5f - t, cy - r * 0.5f, t, r), px);       // right
+        }
+        else if (tooFar)
+        {
+            float r = ringSize, t = ringThickness, seg = ringSize * 0.3f;
+            // four corner ticks — a ring with the middle missing: "seen, not reachable"
+            GUI.DrawTexture(new Rect(cx - r * 0.5f, cy - r * 0.5f, seg, t), px);
+            GUI.DrawTexture(new Rect(cx + r * 0.5f - seg, cy - r * 0.5f, seg, t), px);
+            GUI.DrawTexture(new Rect(cx - r * 0.5f, cy + r * 0.5f - t, seg, t), px);
+            GUI.DrawTexture(new Rect(cx + r * 0.5f - seg, cy + r * 0.5f - t, seg, t), px);
+            GUI.DrawTexture(new Rect(cx - r * 0.5f, cy - r * 0.5f, t, seg), px);
+            GUI.DrawTexture(new Rect(cx - r * 0.5f, cy + r * 0.5f - seg, t, seg), px);
+            GUI.DrawTexture(new Rect(cx + r * 0.5f - t, cy - r * 0.5f, t, seg), px);
+            GUI.DrawTexture(new Rect(cx + r * 0.5f - t, cy + r * 0.5f - seg, t, seg), px);
         }
 
         // Shadow-step hint: peeking from a perch with the step off cooldown —

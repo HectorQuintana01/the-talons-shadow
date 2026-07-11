@@ -144,6 +144,8 @@ public class BossWarden : MonoBehaviour
                     if (playerHealth != null && Vector3.Distance(transform.position, player.position) < 2.2f)
                     {
                         playerHealth.TakeDamage(chargeDamage);
+                        var tcC = playerHealth.GetComponent<TalonController>();
+                        if (tcC != null) tcC.AddImpulse(chargeDir * 16f + Vector3.up * 5f); // a freight train
                         ThirdPersonCamera.Shake(0.4f);
                         EndAttack(WardenState.Stalk, attackCooldown);
                     }
@@ -211,7 +213,16 @@ public class BossWarden : MonoBehaviour
     {
         if (playerHealth != null
             && Vector3.Distance(transform.position, player.position) <= slamRadius)
+        {
             playerHealth.TakeDamage(slamDamage);
+            var tcS = playerHealth.GetComponent<TalonController>();
+            if (tcS != null)
+            {
+                Vector3 radial = (player.position - transform.position);
+                radial.y = 0f;
+                tcS.AddImpulse(radial.normalized * 10f + Vector3.up * 4f);
+            }
+        }
         ThirdPersonCamera.Shake(0.5f);
         Sfx.Play("enemy_death", transform.position, 0.7f); // heavy impact
         EndAttack(WardenState.Stalk, attackCooldown);

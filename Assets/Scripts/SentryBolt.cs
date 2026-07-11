@@ -48,6 +48,8 @@ public class SentryBolt : MonoBehaviour
             Vector3.Distance(transform.position, playerHealth.transform.position + Vector3.up * 0.9f) < 0.7f)
         {
             playerHealth.TakeDamage(damage);
+            var tc = playerHealth.GetComponent<TalonController>();
+            if (tc != null) tc.AddImpulse(new Vector3(dir.x, 0f, dir.z).normalized * 4f);
             Destroy(gameObject);
         }
     }
