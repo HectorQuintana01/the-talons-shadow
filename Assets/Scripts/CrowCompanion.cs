@@ -52,6 +52,7 @@ public class CrowCompanion : MonoBehaviour
     float scanSeed;
     float stepReadyAt;   // unscaled time when shadow step is next available
     bool peekLatch;      // after a step, swallow the held peek until it's released once
+    float peekLockedUntil; // unscaled: pain locks out re-extension briefly (rattled)
 
     void Awake()
     {
@@ -138,6 +139,19 @@ public class CrowCompanion : MonoBehaviour
         Time.fixedDeltaTime = 0.02f * ts; // keep physics stepping in sync with the dilation
     }
 
+    /// <summary>
+    /// Pain rips your attention home: getting hit while extended breaks the peek
+    /// instantly (the held trigger is swallowed until released) and locks
+    /// re-extension for a beat — you're rattled. Enemies can interrupt the flow.
+    /// </summary>
+    public void ForceReturn(float lockout = 0.6f)
+    {
+        if (PeekHeld) ThirdPersonCamera.Shake(0.12f); // the snap-back sting
+        PeekHeld = false;
+        peekLatch = true;
+        peekLockedUntil = Time.unscaledTime + lockout;
+    }
+
     /// <summary>Shadow step is available: crow perched and off cooldown.</summary>
     public bool ShadowStepReady => State == CrowState.Perched && Time.unscaledTime >= stepReadyAt;
 
@@ -197,6 +211,7 @@ public class CrowCompanion : MonoBehaviour
             if (!peek) peekLatch = false;
             peek = false;
         }
+        if (Time.unscaledTime < peekLockedUntil) peek = false; // still rattled
         PeekHeld = peek;
 
         // Send: tap E / RB — raycast through the current view (works from a peek too:

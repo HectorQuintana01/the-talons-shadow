@@ -91,6 +91,10 @@ public class Health : MonoBehaviour
         {
             ThirdPersonCamera.Shake(0.16f);
             Sfx.Play("hurt", transform.position);
+            // Pain breaks the extension: no sitting safely in the crow's eyes
+            // while your body takes hits. Urgency by interruption.
+            var crowRef = FindFirstObjectByType<CrowCompanion>();
+            if (crowRef != null) crowRef.ForceReturn();
         }
 
         if (Current <= 0f)
