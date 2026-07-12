@@ -170,6 +170,21 @@ public class BossWarden : MonoBehaviour
         }
     }
 
+    /// <summary>Plume Flash can't break the Warden's guard, but it INTERRUPTS a
+    /// wind-up and staggers it briefly — a breather, not a kill window.</summary>
+    public void FlashInterrupt()
+    {
+        if (State == WardenState.Dead) return;
+        if (State == WardenState.Charge || State == WardenState.Slam)
+        {
+            TelegraphFill = 0f;
+            chargeLine.enabled = false;
+            cooldownTimer = Mathf.Max(cooldownTimer, 0.75f);
+            State = WardenState.Stalk;
+            Sfx.Play("strike_whiff", transform.position, 0.5f);
+        }
+    }
+
     // ---- guard ----
     void BreakGuard()
     {

@@ -176,6 +176,7 @@ public class GameLoop : MonoBehaviour
             new[]{"SEND CROW", "E", "RB"},
             new[]{"PEEK", "hold right-mouse", "hold LT"},
             new[]{"SHADOW STEP", "dash while peeking a perch", ""},
+            new[]{"PLUME FLASH", "F", "Y"},
             new[]{"RECALL", "Q", "LB"},
             new[]{"PAUSE / RESTART", "P  /  hold R", "select / hold start"},
         };

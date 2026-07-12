@@ -35,6 +35,14 @@ public class CrowCompanion : MonoBehaviour
     [Tooltip("Teleporting to the crow consumes the perch: attention collapses into presence.")]
     public float shadowStepCooldown = 2.5f;
 
+    [Header("Plume Flash (the crow's move — SIGHT: the eye that blinds)")]
+    public float plumeRadius = 6f;
+    public float plumeStun = 2f;
+    public float plumeCooldown = 8f;
+    float plumeReadyAt;   // unscaled time when Plume Flash is next available
+    public float PlumeCooldownFrac => Mathf.Clamp01((plumeReadyAt - Time.unscaledTime) / Mathf.Max(plumeCooldown, 0.01f));
+    public bool PlumeReady => Time.unscaledTime >= plumeReadyAt;
+
     [Header("Refs (auto-found if empty)")]
     public Transform player;
     public Transform cameraTransform;
@@ -54,6 +62,16 @@ public class CrowCompanion : MonoBehaviour
     bool peekLatch;      // after a step, swallow the held peek until it's released once
     float peekLockedUntil; // unscaled: pain locks out re-extension briefly (rattled)
 
+    [Header("Wing flap (the OG cubes, driven by code)")]
+    public float flapFly = 42f;      // full-beat amplitude (deg) while flying
+    public float flapHover = 14f;    // gentle flutter while following
+    public float tuckAngle = -35f;   // wings folded down when perched
+    public float flapSpeedFly = 16f;
+    public float flapSpeedHover = 7f;
+    Transform wingL, wingR;
+    float wingBaseZL, wingBaseZR;    // the cubes' rest tilt (±8°)
+    float wingAngle;                 // current smoothed flap angle
+
     void Awake()
     {
         if (player == null)
@@ -64,6 +82,30 @@ public class CrowCompanion : MonoBehaviour
         if (cameraTransform == null && Camera.main != null)
             cameraTransform = Camera.main.transform;
         scanSeed = 0f;
+        wingL = transform.Find("WingL");
+        wingR = transform.Find("WingR");
+        if (wingL != null) wingBaseZL = wingL.localEulerAngles.z;
+        if (wingR != null) wingBaseZR = wingR.localEulerAngles.z;
+    }
+
+    // Beat the cube wings: full flap flying, gentle flutter following, folded perched.
+    void FlapWings()
+    {
+        if (wingL == null || wingR == null) return;
+        float target;
+        if (State == CrowState.Perched)
+            target = tuckAngle;                                   // held down, folded
+        else
+        {
+            float amp = State == CrowState.FlyTo ? flapFly : flapHover;
+            float spd = State == CrowState.FlyTo ? flapSpeedFly : flapSpeedHover;
+            target = Mathf.Sin(Time.unscaledTime * spd) * amp;   // oscillate up/down
+        }
+        // smooth so state changes read as the wings settling, not snapping
+        wingAngle = Mathf.Lerp(wingAngle, target, 12f * Time.unscaledDeltaTime);
+        // mirrored: +angle lifts both tips together
+        wingL.localRotation = Quaternion.Euler(0f, 0f, wingBaseZL + wingAngle);
+        wingR.localRotation = Quaternion.Euler(0f, 0f, wingBaseZR - wingAngle);
     }
 
     void Update()
@@ -76,6 +118,7 @@ public class CrowCompanion : MonoBehaviour
         float dt = Time.unscaledDeltaTime;
         ReadInputs();
         UpdateTimeDilation(dt);
+        FlapWings();
 
         switch (State)
         {
@@ -224,6 +267,38 @@ public class CrowCompanion : MonoBehaviour
         bool recall = (kb != null && kb.qKey.wasPressedThisFrame)
                    || (gp != null && gp.leftShoulder.wasPressedThisFrame);
         if (recall) State = CrowState.Follow;
+
+        // Plume Flash: tap F / Y — a blinding burst at the crow's position.
+        bool plume = (kb != null && kb.fKey.wasPressedThisFrame)
+                  || (gp != null && gp.buttonNorth.wasPressedThisFrame);
+        if (plume) TryPlumeFlash();
+    }
+
+    void TryPlumeFlash()
+    {
+        if (Time.unscaledTime < plumeReadyAt) return;
+        plumeReadyAt = Time.unscaledTime + plumeCooldown;
+        Vector3 at = transform.position;
+        // Blind every enemy in the burst: regular = stunned; Warden = interrupted.
+        foreach (var col in Physics.OverlapSphere(at, plumeRadius,
+                     Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            var st = col.GetComponentInParent<EnemyStalker>();
+            if (st != null) { st.Stun(plumeStun); continue; }
+            var se = col.GetComponentInParent<EnemySentry>();
+            if (se != null) { se.Stun(plumeStun); continue; }
+            var bw = col.GetComponentInParent<BossWarden>();
+            if (bw != null) bw.FlashInterrupt();
+        }
+        PlumeVfx.Spawn(at, plumeRadius);
+        TalonHUD.ScreenFlash(0.5f);
+        Sfx.Play("caw", at, 1f);
+        Sfx.Play("win", at, 0.35f);   // bright chime transient
+
+        // The burst spends the crow's excursion — it flies home to your shoulder.
+        // If you were extended through it, the view comes home too (peekLatch).
+        State = CrowState.Follow;
+        peekLatch = true;
     }
 
     void TrySend()

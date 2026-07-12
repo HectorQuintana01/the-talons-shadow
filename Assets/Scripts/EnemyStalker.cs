@@ -48,9 +48,20 @@ public class EnemyStalker : MonoBehaviour
     Vector3 baseScale;
     bool lungeHitLanded;
 
+    float stunnedUntil;
+
     public bool IsDistracted => Time.time < distractedUntil;
     public bool IsWindingUp => windupLeft > 0f;
     public bool IsRecovering => recoverLeft > 0f;
+    public bool IsStunned => Time.time < stunnedUntil;
+
+    /// <summary>Plume Flash blinds it — frozen, no attacks, for the duration.</summary>
+    public void Stun(float seconds)
+    {
+        stunnedUntil = Mathf.Max(stunnedUntil, Time.time + seconds);
+        windupLeft = 0f; lungeLeft = 0f; recoverLeft = 0f;
+        transform.localScale = baseScale;
+    }
 
     void Start()
     {
@@ -69,6 +80,13 @@ public class EnemyStalker : MonoBehaviour
         if (player == null) return;
         float dt = Time.deltaTime;
         attackTimer -= dt;
+
+        if (IsStunned)
+        {
+            if (agent.isOnNavMesh) agent.isStopped = true;
+            SetTint(true);                 // amber-lit, dazed
+            return;
+        }
 
         // A crow LANDING nearby grabs attention (edge-trigger, so it wears off).
         // A distraction mid-windup CANCELS the attack — the flash of wings wins.

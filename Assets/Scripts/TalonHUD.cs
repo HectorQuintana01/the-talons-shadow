@@ -20,6 +20,10 @@ public class TalonHUD : MonoBehaviour
     Health playerHealth;
     Texture2D px; // 1x1 white — tinted via GUI.color
 
+    // Plume Flash screen blink — static so CrowCompanion can fire it without a ref.
+    static float flashAmt;
+    public static void ScreenFlash(float amount) { flashAmt = Mathf.Max(flashAmt, amount); }
+
     // Distraction tells: "!" floats over enemies whose attention the crow stole.
     EnemyStalker[] stalkers = new EnemyStalker[0];
     EnemySentry[] sentries = new EnemySentry[0];
@@ -33,6 +37,7 @@ public class TalonHUD : MonoBehaviour
         px = new Texture2D(1, 1);
         px.SetPixel(0, 0, Color.white);
         px.Apply();
+        flashAmt = 0f; // clear any leftover blink across a scene reload
     }
 
     void RefreshEnemyCache()
@@ -122,6 +127,31 @@ public class TalonHUD : MonoBehaviour
             GUI.color = Color.Lerp(new Color(0.75f, 0.12f, 0.1f, 0.9f),
                                    new Color(0.85f, 0.7f, 0.25f, 0.9f), frac);
             GUI.DrawTexture(new Rect(pad, pad, w * frac, h), px);
+
+            // Plume Flash cooldown pip under the health bar (violet = ready).
+            if (crow != null)
+            {
+                float pw = 70f, ph = 8f, py = pad + h + 6f;
+                GUI.color = new Color(0f, 0f, 0f, 0.5f);
+                GUI.DrawTexture(new Rect(pad - 2, py - 2, pw + 4, ph + 4), px);
+                float cd = crow.PlumeCooldownFrac; // 1 = just used, 0 = ready
+                if (cd <= 0f) GUI.color = new Color(0.7f, 0.5f, 1f, 0.95f);       // ready, bright violet
+                else GUI.color = new Color(0.3f, 0.25f, 0.4f, 0.8f);              // charging, dim
+                GUI.DrawTexture(new Rect(pad, py, pw * (1f - cd), ph), px);
+                var ps = new GUIStyle(); ps.fontSize = Mathf.RoundToInt(Screen.height*0.014f);
+                ps.normal.textColor = new Color(0.8f,0.7f,1f,0.9f);
+                GUI.color = Color.white;
+                GUI.Label(new Rect(pad + pw + 6f, py - 2f, 120f, ph + 6f), "PLUME (F/Y)", ps);
+            }
+        }
+
+        // Plume Flash screen blink (white edge-wash, decays fast, unscaled).
+        if (flashAmt > 0.001f)
+        {
+            GUI.color = new Color(0.85f, 0.8f, 1f, flashAmt);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), px);
+            flashAmt = Mathf.MoveTowards(flashAmt, 0f, 2.2f * Time.unscaledDeltaTime);
+            GUI.color = Color.white;
         }
 
         // Boss bar, top-center — only while the Warden lives (day 7 boss).

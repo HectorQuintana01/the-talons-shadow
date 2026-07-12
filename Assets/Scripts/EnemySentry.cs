@@ -32,7 +32,17 @@ public class EnemySentry : MonoBehaviour
     float distractedUntil;
     bool crowWasPerched;
 
+    float stunnedUntil;
     public bool IsDistracted => Time.time < distractedUntil;
+    public bool IsStunned => Time.time < stunnedUntil;
+
+    /// <summary>Plume Flash blinds it — no tracking, no fire, for the duration.</summary>
+    public void Stun(float seconds)
+    {
+        stunnedUntil = Mathf.Max(stunnedUntil, Time.time + seconds);
+        windup = 0f;
+        if (aimLine != null) aimLine.enabled = false;
+    }
 
     void Start()
     {
@@ -54,6 +64,7 @@ public class EnemySentry : MonoBehaviour
     {
         if (!GameLoop.IsPlaying) return; // no winding up through the pause card
         if (player == null) return;
+        if (IsStunned) { if (aimLine != null) aimLine.enabled = false; return; }
         refire -= Time.deltaTime;
 
         // Crow landing nearby yanks the sentry's attention (same edge-trigger as Stalker).
