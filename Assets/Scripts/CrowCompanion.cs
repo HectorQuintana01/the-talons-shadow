@@ -34,6 +34,8 @@ public class CrowCompanion : MonoBehaviour
     [Header("Shadow Step (day 5 — taste of the Step tree)")]
     [Tooltip("Teleporting to the crow consumes the perch: attention collapses into presence.")]
     public float shadowStepCooldown = 2.5f;
+    [Tooltip("Distance gate: you can't step to a perch farther than this from your body — height stays dangerous, no free fall-recovery.")]
+    public float shadowStepRange = 20f;
 
     [Header("Plume Flash (the crow's move — SIGHT: the eye that blinds)")]
     public float plumeRadius = 6f;
@@ -202,7 +204,7 @@ public class CrowCompanion : MonoBehaviour
     /// Consume the perch and hand back the landing point beneath it. The crow breaks
     /// to Follow — you can't keep watching from the place you're now standing.
     /// </summary>
-    public bool TryShadowStep(out Vector3 landing)
+    public bool TryShadowStep(Vector3 fromPos, out Vector3 landing)
     {
         landing = default(Vector3);
         if (!ShadowStepReady) return false;
@@ -220,6 +222,14 @@ public class CrowCompanion : MonoBehaviour
         }
         else
             landing = new Vector3(p.x, 0f, p.z);
+        // DISTANCE GATE: the crow is out of reach if the landing is too far from your
+        // body. Height stays dangerous — no teleporting home across a big fall. The
+        // perch is NOT consumed on a denied step, so you can close in and try again.
+        if (Vector3.Distance(fromPos, landing) > shadowStepRange)
+        {
+            Sfx.Play("strike_whiff", fromPos, 0.35f); // "too far"
+            return false;
+        }
         stepReadyAt = Time.unscaledTime + shadowStepCooldown;
         State = CrowState.Follow;
         peekLatch = true;
@@ -288,7 +298,7 @@ public class CrowCompanion : MonoBehaviour
             var se = col.GetComponentInParent<EnemySentry>();
             if (se != null) { se.Stun(plumeStun); continue; }
             var bw = col.GetComponentInParent<BossWarden>();
-            if (bw != null) bw.FlashInterrupt();
+            if (bw != null) bw.PlumeStrike(); // the flash is the KEY that cracks the Warden's guard
         }
         PlumeVfx.Spawn(at, plumeRadius);
         TalonHUD.ScreenFlash(0.5f);

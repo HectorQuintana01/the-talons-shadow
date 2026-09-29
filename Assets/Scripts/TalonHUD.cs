@@ -90,7 +90,7 @@ public class TalonHUD : MonoBehaviour
         label.normal.textColor = bh.guardActive ? new Color(0.7f, 0.8f, 1f) : new Color(1f, 0.85f, 0.85f);
         GUI.color = Color.white;
         GUI.Label(new Rect(x, y - Screen.height * 0.028f, w, Screen.height * 0.026f),
-            bh.guardActive ? "THE TALON-WARDEN  —  guarded (send the crow)" : "THE TALON-WARDEN  —  EXPOSED", label);
+            bh.guardActive ? "THE TALON-WARDEN  —  guarded (PLUME FLASH it)" : "THE TALON-WARDEN  —  EXPOSED", label);
     }
 
     void OnGUI()

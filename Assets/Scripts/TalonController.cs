@@ -115,10 +115,12 @@ public class TalonController : MonoBehaviour
         // where your attention is. Consumes the perch. You arrive PLANTED: i-frames
         // without momentum (the old dash-slide launched you off pillar tops), and a
         // one-beat input lock so the stick you were holding can't walk you off.
-        if (extended && crow != null && DashPressed())
+        // Must be grounded (or in the brief coyote grace) to Shadow Step — no stepping
+        // home mid-air after a fall. Falling is a real loss again; height bites.
+        if (extended && crow != null && DashPressed() && (cc.isGrounded || coyoteTimer > 0f))
         {
             Vector3 landing;
-            if (crow.TryShadowStep(out landing))
+            if (crow.TryShadowStep(transform.position, out landing))
             {
                 cc.enabled = false; // CharacterController fights teleports unless disabled
                 transform.position = landing + Vector3.up * 0.05f;
