@@ -59,3 +59,7 @@ Guardrail: the crow must never feel like a mode or a menu.
 **Tip:** send again *while peeking* — the crow re-routes from its own vantage.
 Hop it perch to perch to scout deep (your body stays behind, so every hop is
 a bet), then Shadow Step to wherever it landed.
+
+## Recovered from session history (2026-11-08)
+
+Release deliverable named in the studio SOP session but not tracked here: `HOW_IT_WAS_MADE`.
